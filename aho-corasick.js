@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const readline = require('readline');
+
 
 class AhoCorasickNode {
     constructor() {
@@ -135,8 +137,28 @@ function searchPatternsInFiles(directoryPath, patterns) {
     });
 }
 
-// Example Usage
-const directoryPath = './files'; // Replace with your directory containing text files
-const patterns = ['test', 'example', 'pattern']; // Replace with your desired patterns
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
 
-searchPatternsInFiles(directoryPath, patterns);
+const directoryPath = './files'; // Fixed directory path
+
+rl.question('Enter patterns to search (separate with commas): ', (input) => {
+    const patterns = input.split(',').map(pattern => pattern.trim()).filter(Boolean);
+
+    if (patterns.length === 0) {
+        console.log('⚠️ No patterns provided. Exiting...');
+        rl.close();
+        return;
+    }
+
+    if (!fs.existsSync(directoryPath)) {
+        console.warn(`Directory "${directoryPath}" does not exist. Please check the path.`);
+        rl.close();
+        return;
+    }
+
+    searchPatternsInFiles(directoryPath, patterns);
+    rl.close();
+});
