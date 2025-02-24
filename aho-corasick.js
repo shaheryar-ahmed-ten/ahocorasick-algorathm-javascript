@@ -6,9 +6,9 @@ const readline = require('readline');
 const directoryPath = './files'; 
 
 const rl = readline.createInterface({
-    input: process.stdin,
+        input: process.stdin,
     output: process.stdout
-});
+    });
 rl.question('Enter patterns to search (separate with commas): ', (input) => {
     const patterns = input.split(',').map(pattern => pattern.trim()).filter(Boolean);
 
