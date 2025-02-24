@@ -67,6 +67,7 @@ class AhoCorasick {
         node.output.push(output);  // Add pattern to output at the final node
     }
 
+    //This function handles suffix links
     buildFailureFunction() {
         const queue = [];
 
