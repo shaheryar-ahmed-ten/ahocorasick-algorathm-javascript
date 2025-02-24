@@ -3,7 +3,32 @@ const path = require('path');
 const readline = require('readline');
 
 
-class AhoCorasickNode {
+const directoryPath = './files'; 
+
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+rl.question('Enter patterns to search (separate with commas): ', (input) => {
+    const patterns = input.split(',').map(pattern => pattern.trim()).filter(Boolean);
+
+    if (patterns.length === 0) {
+        console.log('⚠️ No patterns provided. Exiting...');
+        rl.close();
+        return;
+    }
+
+    if (!fs.existsSync(directoryPath)) {
+        console.warn(`Directory "${directoryPath}" does not exist. Please check the path.`);
+        rl.close();
+        return;
+    }
+
+    searchPatternsInFiles(directoryPath, patterns);
+    rl.close();
+});
+
+class AhoCorasikNode {
     constructor() {
         this.children = {};
         this.output = [];
@@ -13,15 +38,15 @@ class AhoCorasickNode {
 
 class AhoCorasick {
     constructor() {
-        this.root = new AhoCorasickNode();
+        this.root = new AhoCorasikNode();
     }
 
-    // buildTrie(pattern, output) {
+    // makeTheTrie(pattern, output) {
     //     let node = this.root;
 
     //     for (const char of pattern) {
     //         if (!node.children[char]) {
-    //             this.root.children[char] = new AhoCorasickNode();
+    //             this.root.children[char] = new AhoCorasikNode();
     //             node = this.root
     //         }
     //     }
@@ -29,12 +54,12 @@ class AhoCorasick {
     //     node.output.push(output);  
     // }
 
-    buildTrie(pattern, output) {
+    makeTheTrie(pattern, output) {
         let node = this.root;
 
         for (const char of pattern) {
             if (!node.children[char]) {
-                node.children[char] = new AhoCorasickNode();
+                node.children[char] = new AhoCorasikNode();
             }
             node = node.children[char];
         }
@@ -106,7 +131,7 @@ function searchPatternsInFiles(directoryPath, patterns) {
     const ahoCorasick = new AhoCorasick();
 
     // Add patterns to the automaton
-    patterns.forEach(pattern => ahoCorasick.buildTrie(pattern, pattern));
+    patterns.forEach(pattern => ahoCorasick.makeTheTrie(pattern, pattern));
     ahoCorasick.buildFailureFunction();
 
     const files = fs.readdirSync(directoryPath);
@@ -137,28 +162,5 @@ function searchPatternsInFiles(directoryPath, patterns) {
     });
 }
 
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
 
-const directoryPath = './files'; // Fixed directory path
 
-rl.question('Enter patterns to search (separate with commas): ', (input) => {
-    const patterns = input.split(',').map(pattern => pattern.trim()).filter(Boolean);
-
-    if (patterns.length === 0) {
-        console.log('⚠️ No patterns provided. Exiting...');
-        rl.close();
-        return;
-    }
-
-    if (!fs.existsSync(directoryPath)) {
-        console.warn(`Directory "${directoryPath}" does not exist. Please check the path.`);
-        rl.close();
-        return;
-    }
-
-    searchPatternsInFiles(directoryPath, patterns);
-    rl.close();
-});
