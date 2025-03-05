@@ -93,14 +93,14 @@ class AhoCorasick {
 
         let failureNode = currentNode.failure;
 
-        // Traverse suffix links until a matching character is found
+        // yahan pr greatest suffix prefix maloom krna hai
                 while (failureNode !== null && !failureNode.children[key]) {
                             failureNode = failureNode.failure;
                                  }
 
         child.failure = failureNode ? failureNode.children[key] : this.root;
         // console.log(child.failure)
-        // Inherit output patterns from the failure node
+        // failure links se iska output link update krna hai
     child.output = child.output.concat(child.failure.output);
     }
         }
