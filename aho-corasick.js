@@ -1,6 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
+const pdf = require('pdf-parse');
+const mammoth = require('mammoth');
+const xlsx = require('xlsx');
 
 
 const directoryPath = './files'; 
@@ -127,7 +130,6 @@ for (let i = 0; i < text.length; i++) {
                 }
 }
 
-
 function searchPatternsInFiles(directoryPath, patterns) {
     const ahoCorasick = new AhoCorasick();
 
@@ -135,32 +137,79 @@ function searchPatternsInFiles(directoryPath, patterns) {
     patterns.forEach(pattern => ahoCorasick.makeTheTrie(pattern, pattern));
     ahoCorasick.buildFailureFunction();
 
-    const files = fs.readdirSync(directoryPath);
+    function processSearch(content, fileName) {
+        console.log(`\n🔎 Searching in file: ${fileName}`);
 
-    files.forEach((file) => {
-        const filePath = path.join(directoryPath, file);
+        const occurrences = {};
+        ahoCorasick.search(content, (index, pattern) => {
+            if (!occurrences[pattern]) occurrences[pattern] = [];
+            occurrences[pattern].push(index);
+        });
 
-        // Only process regular files
-        if (fs.lstatSync(filePath).isFile()) {
-            const content = fs.readFileSync(filePath, 'utf-8');
-            console.log(`\n🔎 Searching in file: ${file}`);
-
-            const occurrences = {};
-
-            ahoCorasick.search(content, (index, pattern) => {
-                if (!occurrences[pattern]) occurrences[pattern] = [];
-                occurrences[pattern].push(index);
-            });
-
-            if (Object.keys(occurrences).length === 0) {
-                console.log("❌ No patterns found.");
-            } else {
-                for (const [pattern, positions] of Object.entries(occurrences)) {
-                    console.log(`✅ Pattern "${pattern}" found ${positions.length} time(s) at positions: ${positions.join(', ')}`);
-                }
+        if (Object.keys(occurrences).length === 0) {
+            console.log("❌ No patterns found.");
+        } else {
+            for (const [pattern, positions] of Object.entries(occurrences)) {
+                console.log(`✅ Pattern "${pattern}" found ${positions.length} time(s) at positions: ${positions.join(', ')}`);
             }
         }
-    });
+    }
+
+    function readPdf(filePath) {
+        const dataBuffer = fs.readFileSync(filePath);
+        return pdf(dataBuffer).then(data => data.text);
+    }
+
+    function readDocx(filePath) {
+        return mammoth.extractRawText({ path: filePath }).then(result => result.value);
+    }
+
+    function readExcel(filePath) {
+        const workbook = xlsx.readFile(filePath);
+        let text = "";
+        workbook.SheetNames.forEach(sheetName => {
+            const sheet = workbook.Sheets[sheetName];
+            text += xlsx.utils.sheet_to_csv(sheet); // Convert sheet to CSV text
+        });
+        return text;
+    }
+
+    function traverseDirectory(currentPath) {
+        const items = fs.readdirSync(currentPath);
+
+        items.forEach(item => {
+            const itemPath = path.join(currentPath, item);
+            const stats = fs.statSync(itemPath);
+
+            if (stats.isDirectory()) {
+                // Recursively process subdirectories
+                traverseDirectory(itemPath);
+            } else if (stats.isFile()) {
+                // Handle different file types
+                const textFileExtensions = ['.txt', '.csv', '.log'];
+                const codeFileExtensions = ['.js', '.php', '.py', '.java', '.cpp', '.c', '.html', '.css', '.ts'];
+
+                // Handle text and code files
+                if (textFileExtensions.some(ext => item.endsWith(ext)) || 
+                    codeFileExtensions.some(ext => item.endsWith(ext))) {
+                    const content = fs.readFileSync(itemPath, 'utf-8');
+                    processSearch(content, itemPath);
+                } else if (item.endsWith('.pdf')) {
+                    readPdf(itemPath).then(content => processSearch(content, itemPath));
+                } else if (item.endsWith('.docx')) {
+                    readDocx(itemPath).then(content => processSearch(content, itemPath));
+                } else if (item.endsWith('.xls') || item.endsWith('.xlsx')) {
+                    const content = readExcel(itemPath);
+                    processSearch(content, itemPath);
+                } else {
+                    console.log(`❌ Skipping unsupported file type: ${itemPath}`);
+                }
+            }
+        });
+    }
+
+    // Start recursive traversal from the root directory
+    traverseDirectory(directoryPath);
 }
 
 
