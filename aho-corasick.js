@@ -6,6 +6,7 @@ const mammoth = require('mammoth');
 const xlsx = require('xlsx');
 
 
+// const directoryPath = 'C:/Hype/frontend'; 
 const directoryPath = './files'; 
 
 const rl = readline.createInterface({
@@ -187,23 +188,23 @@ function searchPatternsInFiles(directoryPath, patterns) {
             } else if (stats.isFile()) {
                 // Handle different file types
                 const textFileExtensions = ['.txt', '.csv', '.log'];
-                const codeFileExtensions = ['.js', '.php', '.py', '.java', '.cpp', '.c', '.html', '.css', '.ts'];
+                // const codeFileExtensions = ['.php', '.py', '.java', '.cpp', '.c', '.html', '.css', '.ts'];
 
                 // Handle text and code files
-                if (textFileExtensions.some(ext => item.endsWith(ext)) || 
-                    codeFileExtensions.some(ext => item.endsWith(ext))) {
+                if (textFileExtensions.some(ext => item.endsWith(ext))) {
                     const content = fs.readFileSync(itemPath, 'utf-8');
                     processSearch(content, itemPath);
-                } else if (item.endsWith('.pdf')) {
-                    readPdf(itemPath).then(content => processSearch(content, itemPath));
-                } else if (item.endsWith('.docx')) {
-                    readDocx(itemPath).then(content => processSearch(content, itemPath));
-                } else if (item.endsWith('.xls') || item.endsWith('.xlsx')) {
-                    const content = readExcel(itemPath);
-                    processSearch(content, itemPath);
-                } else {
-                    console.log(`❌ Skipping unsupported file type: ${itemPath}`);
-                }
+                } 
+                // else if (item.endsWith('.pdf')) {
+                //     readPdf(itemPath).then(content => processSearch(content, itemPath));
+                // } else if (item.endsWith('.docx')) {
+                //     readDocx(itemPath).then(content => processSearch(content, itemPath));
+                // } else if (item.endsWith('.xls') || item.endsWith('.xlsx')) {
+                //     const content = readExcel(itemPath);
+                //     processSearch(content, itemPath);
+                // } else {
+                //     console.log(`❌ Skipping unsupported file type: ${itemPath}`);
+                // }
             }
         });
     }
