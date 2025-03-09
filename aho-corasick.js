@@ -159,7 +159,7 @@ for (let i = 0; i < text.length; i++) {
 
 function searchPatternsInFiles(directoryPath, keywords, searchKeyword) {
     const ahoCorasick = new AhoCorasick();
-    console.log("keywords",keywords)
+    // console.log("keywords",keywords)
     // Add keywords to the Trie
     keywords.forEach(keyword => ahoCorasick.makeTheTrie(keyword, keyword));
     ahoCorasick.buildFailureFunction();
