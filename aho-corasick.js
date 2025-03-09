@@ -1,9 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
-const pdf = require('pdf-parse');
-const mammoth = require('mammoth');
-const xlsx = require('xlsx');
+
 
 
 // const directoryPath = 'C:/Hype/frontend'; 
