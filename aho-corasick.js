@@ -13,24 +13,37 @@ const rl = readline.createInterface({
         input: process.stdin,
     output: process.stdout
     });
-rl.question('Enter patterns to search (separate with commas): ', (input) => {
-    const patterns = input.split(',').map(pattern => pattern.trim()).filter(Boolean);
 
-    if (patterns.length === 0) {
-        console.log('⚠️ No patterns provided. Exiting...');
+rl.question("Enter the directory path to search files: ",(directoryPath) => {
+    if(!fs.existsSync(directoryPath)){
+        console.log(`Directory "${directoryPath}" does not exist. Please check the path.`)
         rl.close();
         return;
     }
 
-    if (!fs.existsSync(directoryPath)) {
-        console.warn(`Directory "${directoryPath}" does not exist. Please check the path.`);
+    rl.question('Enter patterns to search (separate with commas): ', (input) => {
+        const patterns = input.split(',').map(pattern => pattern.trim()).filter(Boolean);
+    
+        if (patterns.length === 0) {
+            console.log('⚠️ No patterns provided. Exiting...');
+            rl.close();
+            return;
+        }
+    
+        if (!fs.existsSync(directoryPath)) {
+            console.warn(`Directory "${directoryPath}" does not exist. Please check the path.`);
+            rl.close();
+            return;
+        }
+    
+        searchPatternsInFiles(directoryPath, patterns);
+        // results.forEach((value) => {
+        //     console.log(`${value}`);
+        // });
         rl.close();
-        return;
-    }
+    });
+})
 
-    searchPatternsInFiles(directoryPath, patterns);
-    rl.close();
-});
 
 class AhoCorasikNode {
     constructor() {
@@ -72,7 +85,7 @@ class AhoCorasick {
     }
 
     //This function handles suffix links
-    buildFailureFunction() {
+    makeSuffixLinks() {
         const queue = [];
 
         // Set failure links for immediate children of the root
@@ -110,7 +123,7 @@ class AhoCorasick {
         }
     }
 
-    search(text, callback) {
+    findInTrie(text, callback) {
         let currentNode = this.root;
 
 for (let i = 0; i < text.length; i++) {
@@ -130,49 +143,32 @@ for (let i = 0; i < text.length; i++) {
         }
                 }
 }
+// const results = []
 
 function searchPatternsInFiles(directoryPath, patterns) {
     const ahoCorasick = new AhoCorasick();
 
     // Add patterns to the automaton
     patterns.forEach(pattern => ahoCorasick.makeTheTrie(pattern, pattern));
-    ahoCorasick.buildFailureFunction();
+    ahoCorasick.makeSuffixLinks();
 
     function processSearch(content, fileName) {
-        console.log(`\n🔎 Searching in file: ${fileName}`);
+        // console.log(`\n🔎 Searching in file: ${fileName}`);
 
         const occurrences = {};
-        ahoCorasick.search(content, (index, pattern) => {
+        ahoCorasick.findInTrie(content, (index, pattern) => {
             if (!occurrences[pattern]) occurrences[pattern] = [];
             occurrences[pattern].push(index);
         });
 
         if (Object.keys(occurrences).length === 0) {
-            console.log("❌ No patterns found.");
+            // console.log("❌ No patterns found.");
         } else {
             for (const [pattern, positions] of Object.entries(occurrences)) {
-                console.log(`✅ Pattern "${pattern}" found ${positions.length} time(s) at positions: ${positions.join(', ')}`);
+                // results.push(`✅ file: ${fileName}:Pattern "${pattern}" found ${positions.length} time(s) at positions: ${positions.join(', ')}`)
+                console.log(`✅ file: ${fileName}:Pattern "${pattern}" found ${positions.length} time(s) at positions: ${positions.join(', ')}`);
             }
         }
-    }
-
-    function readPdf(filePath) {
-        const dataBuffer = fs.readFileSync(filePath);
-        return pdf(dataBuffer).then(data => data.text);
-    }
-
-    function readDocx(filePath) {
-        return mammoth.extractRawText({ path: filePath }).then(result => result.value);
-    }
-
-    function readExcel(filePath) {
-        const workbook = xlsx.readFile(filePath);
-        let text = "";
-        workbook.SheetNames.forEach(sheetName => {
-            const sheet = workbook.Sheets[sheetName];
-            text += xlsx.utils.sheet_to_csv(sheet); // Convert sheet to CSV text
-        });
-        return text;
     }
 
     function traverseDirectory(currentPath) {
@@ -186,25 +182,11 @@ function searchPatternsInFiles(directoryPath, patterns) {
                 // Recursively process subdirectories
                 traverseDirectory(itemPath);
             } else if (stats.isFile()) {
-                // Handle different file types
-                const textFileExtensions = ['.txt', '.csv', '.log'];
-                // const codeFileExtensions = ['.php', '.py', '.java', '.cpp', '.c', '.html', '.css', '.ts'];
 
-                // Handle text and code files
-                if (textFileExtensions.some(ext => item.endsWith(ext))) {
+                if (item.endsWith('.txt')) {
                     const content = fs.readFileSync(itemPath, 'utf-8');
                     processSearch(content, itemPath);
                 } 
-                // else if (item.endsWith('.pdf')) {
-                //     readPdf(itemPath).then(content => processSearch(content, itemPath));
-                // } else if (item.endsWith('.docx')) {
-                //     readDocx(itemPath).then(content => processSearch(content, itemPath));
-                // } else if (item.endsWith('.xls') || item.endsWith('.xlsx')) {
-                //     const content = readExcel(itemPath);
-                //     processSearch(content, itemPath);
-                // } else {
-                //     console.log(`❌ Skipping unsupported file type: ${itemPath}`);
-                // }
             }
         });
     }
