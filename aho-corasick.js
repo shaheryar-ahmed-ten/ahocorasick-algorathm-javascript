@@ -6,31 +6,57 @@ const mammoth = require('mammoth');
 const xlsx = require('xlsx');
 
 
-// const directoryPath = 'C:/Hype/frontend'; 
-const directoryPath = './files'; 
-
+const directoryPath = 'C:/Hype/frontend'; 
+// const directoryPath = './files'; 
 const rl = readline.createInterface({
-        input: process.stdin,
+    input: process.stdin,
     output: process.stdout
-    });
-rl.question('Enter patterns to search (separate with commas): ', (input) => {
-    const patterns = input.split(',').map(pattern => pattern.trim()).filter(Boolean);
-
-    if (patterns.length === 0) {
-        console.log('⚠️ No patterns provided. Exiting...');
-        rl.close();
-        return;
-    }
-
+});
+rl.question('Enter the directory path to search in: ', (directoryPath) => {
     if (!fs.existsSync(directoryPath)) {
         console.warn(`Directory "${directoryPath}" does not exist. Please check the path.`);
         rl.close();
         return;
     }
 
-    searchPatternsInFiles(directoryPath, patterns);
-    rl.close();
+    // Step 2: Ask user for the file containing keywords
+    rl.question('Enter the path to the file containing keywords: ', (keywordsFilePath) => {
+        if (!fs.existsSync(keywordsFilePath)) {
+            console.warn(`File "${keywordsFilePath}" does not exist. Please check the path.`);
+            rl.close();
+            return;
+        }
+
+        // Read keywords from file
+        const keywords = fs.readFileSync(keywordsFilePath, 'utf-8')
+        .split(/\r?\n/)  // Split by new lines
+        .filter(keyword => keyword.length > 0); 
+
+        if (keywords.length === 0) {
+            console.warn("No keywords found in the file. Exiting...");
+            rl.close();
+            return;
+        }
+
+        console.log(`Loaded ${keywords.length} keywords from file.`);
+
+        // Step 3: Ask user for the search string (must be from keywords)
+        rl.question(`Enter a search keyword (must be from the list): `, (searchKeyword) => {
+            console.log(":- keywords",keywords,"searchKeyword",searchKeyword)
+            if (!keywords.includes(searchKeyword)) {
+                console.warn(`"${searchKeyword}" is not in the keyword list. Please enter a valid keyword.`);
+                rl.close();
+                return;
+            }
+
+            console.log(`🔍 Searching for "${searchKeyword}" in files...`);
+
+            searchPatternsInFiles(directoryPath, keywords, searchKeyword);
+            rl.close();
+        });
+    });
 });
+
 
 class AhoCorasikNode {
     constructor() {
@@ -131,11 +157,11 @@ for (let i = 0; i < text.length; i++) {
                 }
 }
 
-function searchPatternsInFiles(directoryPath, patterns) {
+function searchPatternsInFiles(directoryPath, keywords, searchKeyword) {
     const ahoCorasick = new AhoCorasick();
-
-    // Add patterns to the automaton
-    patterns.forEach(pattern => ahoCorasick.makeTheTrie(pattern, pattern));
+    console.log("keywords",keywords)
+    // Add keywords to the Trie
+    keywords.forEach(keyword => ahoCorasick.makeTheTrie(keyword, keyword));
     ahoCorasick.buildFailureFunction();
 
     function processSearch(content, fileName) {
@@ -147,32 +173,14 @@ function searchPatternsInFiles(directoryPath, patterns) {
             occurrences[pattern].push(index);
         });
 
-        if (Object.keys(occurrences).length === 0) {
-            console.log("❌ No patterns found.");
+        console.log(":- occurrences",occurrences)
+
+        // Only display results for the user-selected keyword
+        if (occurrences[searchKeyword]) {
+            console.log(`✅ Pattern "${searchKeyword}" found ${occurrences[searchKeyword].length} time(s) at positions: ${occurrences[searchKeyword].join(', ')}`);
         } else {
-            for (const [pattern, positions] of Object.entries(occurrences)) {
-                console.log(`✅ Pattern "${pattern}" found ${positions.length} time(s) at positions: ${positions.join(', ')}`);
-            }
+            console.log("❌ No matches found.");
         }
-    }
-
-    function readPdf(filePath) {
-        const dataBuffer = fs.readFileSync(filePath);
-        return pdf(dataBuffer).then(data => data.text);
-    }
-
-    function readDocx(filePath) {
-        return mammoth.extractRawText({ path: filePath }).then(result => result.value);
-    }
-
-    function readExcel(filePath) {
-        const workbook = xlsx.readFile(filePath);
-        let text = "";
-        workbook.SheetNames.forEach(sheetName => {
-            const sheet = workbook.Sheets[sheetName];
-            text += xlsx.utils.sheet_to_csv(sheet); // Convert sheet to CSV text
-        });
-        return text;
     }
 
     function traverseDirectory(currentPath) {
@@ -183,35 +191,21 @@ function searchPatternsInFiles(directoryPath, patterns) {
             const stats = fs.statSync(itemPath);
 
             if (stats.isDirectory()) {
-                // Recursively process subdirectories
                 traverseDirectory(itemPath);
             } else if (stats.isFile()) {
-                // Handle different file types
-                const textFileExtensions = ['.txt', '.csv', '.log'];
-                // const codeFileExtensions = ['.php', '.py', '.java', '.cpp', '.c', '.html', '.css', '.ts'];
+                const textFileExtensions = ['.txt'];
 
-                // Handle text and code files
                 if (textFileExtensions.some(ext => item.endsWith(ext))) {
                     const content = fs.readFileSync(itemPath, 'utf-8');
                     processSearch(content, itemPath);
-                } 
-                // else if (item.endsWith('.pdf')) {
-                //     readPdf(itemPath).then(content => processSearch(content, itemPath));
-                // } else if (item.endsWith('.docx')) {
-                //     readDocx(itemPath).then(content => processSearch(content, itemPath));
-                // } else if (item.endsWith('.xls') || item.endsWith('.xlsx')) {
-                //     const content = readExcel(itemPath);
-                //     processSearch(content, itemPath);
-                // } else {
-                //     console.log(`❌ Skipping unsupported file type: ${itemPath}`);
-                // }
+                }
             }
         });
     }
 
-    // Start recursive traversal from the root directory
     traverseDirectory(directoryPath);
 }
+
 
 
 
